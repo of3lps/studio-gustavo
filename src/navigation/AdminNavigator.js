@@ -7,6 +7,7 @@ import { COLORS } from '../constants/theme';
 import AdminAgendaScreen from '../screens/admin/AdminAgendaScreen';
 import AdminStatsScreen from '../screens/admin/AdminStatsScreen';
 import AdminStoreScreen from '../screens/admin/AdminStoreScreen';
+import AdminClientsScreen from '../screens/admin/AdminClientsScreen'; 
 
 const Tab = createBottomTabNavigator();
 
@@ -44,6 +45,13 @@ export default function AdminNavigator() {
         component={AdminStoreScreen} 
         options={{
           tabBarIcon: ({ color }) => <MaterialIcons name="storefront" size={24} color={color} />
+        }}
+      />
+      <Tab.Screen 
+        name="Clientes" 
+        component={AdminClientsScreen} 
+        options={{
+          tabBarIcon: ({ color }) => <MaterialIcons name="people" size={24} color={color} />
         }}
       />
     </Tab.Navigator>

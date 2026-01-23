@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, StatusBar, SafeAreaView } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, StatusBar, SafeAreaView, Alert } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { COLORS } from '../constants/theme';
 import { CALENDAR_AVAILABILITY, TODAY_APPOINTMENTS } from '../data/mockData';
@@ -14,15 +14,20 @@ const DAYS = [
 ];
 
 export default function BookingScreen({ route, navigation }) {
-  // CORREÇÃO: Adicionado valor padrão vazio [] para selectedServices
-  const { totalDuration, selectedServices = [] } = route.params || { totalDuration: 30, selectedServices: [] };
+  // Extraindo Params (Incluindo modo admin e dados do cliente)
+  const { 
+    totalDuration, 
+    selectedServices = [], 
+    isAdminMode = false, 
+    clientData = null 
+  } = route.params || { totalDuration: 30, selectedServices: [] };
   
   const [selectedDay, setSelectedDay] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState(null);
 
   const totalPrice = selectedServices.reduce((acc, item) => acc + item.price, 0);
 
-  // Lógica de Disponibilidade do Dia
+  // --- Lógica do Calendário ---
   const isDayAvailable = (dayNum) => {
     const slotsForThatDay = CALENDAR_AVAILABILITY[dayNum] || [];
     if (slotsForThatDay.length === 0) return false;
@@ -40,17 +45,11 @@ export default function BookingScreen({ route, navigation }) {
     if (firstAvailable) setSelectedDay(firstAvailable);
   }, []);
 
-  // Lógica de Agrupamento de Horários
   const groupedSlots = useMemo(() => {
     if (!selectedDay) return { Morning: [], Afternoon: [], Evening: [] };
-
     const rawSlots = CALENDAR_AVAILABILITY[selectedDay.num] || [];
     const slotsNeeded = Math.ceil(totalDuration / 30);
-    
-    const validStartTimes = rawSlots.filter((slot, index) => {
-      return (index + slotsNeeded) <= rawSlots.length; 
-    });
-
+    const validStartTimes = rawSlots.filter((slot, index) => (index + slotsNeeded) <= rawSlots.length);
     const groups = { Morning: [], Afternoon: [], Evening: [] };
     validStartTimes.forEach(time => {
       const hour = parseInt(time.split(':')[0]);
@@ -76,14 +75,41 @@ export default function BookingScreen({ route, navigation }) {
               onPress={() => setSelectedSlot(time)}
               style={[styles.slot, selectedSlot === time && styles.slotSelected]}
             >
-              <Text style={[styles.slotText, selectedSlot === time && styles.slotTextSelected]}>
-                {time}
-              </Text>
+              <Text style={[styles.slotText, selectedSlot === time && styles.slotTextSelected]}>{time}</Text>
             </TouchableOpacity>
           ))}
         </View>
       </View>
     );
+  };
+
+  // --- Lógica de Confirmação ---
+  const handleConfirm = () => {
+    const newAppointment = {
+        id: Math.random(),
+        // SE FOR ADMIN: Usa o nome do cliente que ele escolheu. SE NÃO: Usa "Cliente App"
+        client: isAdminMode && clientData ? clientData.name : "Cliente App",
+        service: selectedServices.map(s => s.title).join(' + '),
+        date: `2026-10-${selectedDay.num}`,
+        time: selectedSlot,
+        // SE FOR ADMIN: Já entra confirmado. SE NÃO: Pendente.
+        status: isAdminMode ? 'confirmed' : 'pending',
+        price: totalPrice
+    };
+
+    TODAY_APPOINTMENTS.push(newAppointment);
+
+    if (isAdminMode) {
+        // Fluxo do Admin: Alerta e volta pro Dashboard
+        Alert.alert(
+            "Agendamento Criado!", 
+            `Confirmado para ${clientData.name} às ${selectedSlot}`,
+            [{ text: "OK", onPress: () => navigation.navigate('AdminDashboard') }]
+        );
+    } else {
+        // Fluxo do Cliente: Vai para tela de sucesso
+        navigation.navigate('Success');
+    }
   };
 
   return (
@@ -94,7 +120,10 @@ export default function BookingScreen({ route, navigation }) {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <MaterialIcons name="arrow-back-ios" size={20} color={COLORS.textLight} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>ESCOLHER HORÁRIO</Text>
+        <View>
+            <Text style={styles.headerTitle}>ESCOLHER HORÁRIO</Text>
+            {isAdminMode && <Text style={styles.adminLabel}>Para: {clientData.name}</Text>}
+        </View>
         <View style={{ width: 40 }} />
       </View>
 
@@ -103,8 +132,8 @@ export default function BookingScreen({ route, navigation }) {
           <View style={styles.calendarContainer}>
             <View style={{flexDirection:'row', justifyContent:'space-between', paddingRight: 20}}>
                 <Text style={styles.monthTitle}>Outubro 2026</Text>
-                <Text style={{color: COLORS.primary, fontSize: 10, fontWeight:'bold'}}>
-                   RECOMENDADOS PARA {totalDuration} MIN
+                <Text style={{color: isAdminMode ? '#4CAF50' : COLORS.primary, fontSize: 10, fontWeight:'bold'}}>
+                   {isAdminMode ? 'MODO ADMINISTRADOR' : `RECOMENDADOS PARA ${totalDuration} MIN`}
                 </Text>
             </View>
 
@@ -169,22 +198,12 @@ export default function BookingScreen({ route, navigation }) {
           </View>
           
           <TouchableOpacity 
-            style={styles.btnConfirm}
-            onPress={() => {
-                const newAppointment = {
-                    id: Math.random(),
-                    client: "Cliente Demo",
-                    service: selectedServices.map(s => s.title).join(' + '),
-                    date: `2026-10-${selectedDay.num}`, // Salva a data correta para o admin
-                    time: selectedSlot,
-                    status: 'pending',
-                    price: totalPrice
-                };
-                TODAY_APPOINTMENTS.push(newAppointment);
-                navigation.navigate('Success');
-            }}
+            style={[styles.btnConfirm, isAdminMode && {backgroundColor: '#4CAF50'}]} 
+            onPress={handleConfirm}
           >
-            <Text style={styles.btnConfirmText}>SOLICITAR AGENDAMENTO</Text>
+            <Text style={styles.btnConfirmText}>
+                {isAdminMode ? "CONFIRMAR E SALVAR" : "SOLICITAR AGENDAMENTO"}
+            </Text>
           </TouchableOpacity>
         </View>
       )}
@@ -195,7 +214,8 @@ export default function BookingScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 40, paddingBottom: 10, paddingHorizontal: 20 },
-  headerTitle: { color: COLORS.textLight, fontSize: 16, fontWeight: 'bold', letterSpacing: 1 },
+  headerTitle: { color: COLORS.textLight, fontSize: 16, fontWeight: 'bold', letterSpacing: 1, textAlign: 'center' },
+  adminLabel: { color: '#4CAF50', fontSize: 12, fontWeight: 'bold', textAlign: 'center' },
   backBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.surfaceHighlight, borderRadius: 20 },
   
   calendarContainer: { marginTop: 20, marginBottom: 10 },

@@ -87,3 +87,43 @@ export const CALENDAR_AVAILABILITY = {
   '18': [], // Barbeiro de folga (Vazio)
   '19': ["08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30"] // Sábado manhã livre
 };
+// ... (Mantenha todo o resto igual)
+
+export const CLIENTS = [
+  { 
+    id: 'u1', 
+    name: 'João Silva', 
+    phone: '11 99999-1111', 
+    email: 'joao@email.com', 
+    avatar: 'https://ui-avatars.com/api/?name=Joao+Silva&background=D4A373&color=fff',
+    lastVisit: '10/10/2026',
+    notes: 'Gosta da lateral bem baixa (Zero).'
+  },
+  { 
+    id: 'u2', 
+    name: 'Pedro Santos', 
+    phone: '11 98888-2222', 
+    email: 'pedro.s@email.com',
+    avatar: 'https://ui-avatars.com/api/?name=Pedro+Santos&background=4CAF50&color=fff', 
+    lastVisit: '05/10/2026',
+    notes: 'Alergia a lâmina, usar shaver.'
+  },
+  { 
+    id: 'u3', 
+    name: 'João Silva', // Nome duplicado propositalmente para teste
+    phone: '11 97777-3333', 
+    email: 'joao.junior@email.com',
+    avatar: 'https://ui-avatars.com/api/?name=Joao+Junior&background=2196F3&color=fff',
+    lastVisit: 'Nunca veio',
+    notes: 'Novo cliente.'
+  },
+  { 
+    id: 'u4', 
+    name: 'Lucas Mendes', 
+    phone: '21 96666-4444', 
+    email: 'lucas@email.com',
+    avatar: 'https://ui-avatars.com/api/?name=Lucas+Mendes&background=9C27B0&color=fff',
+    lastVisit: '12/10/2026',
+    notes: ''
+  },
+];

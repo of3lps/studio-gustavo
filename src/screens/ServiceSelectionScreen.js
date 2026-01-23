@@ -5,7 +5,10 @@ import { COLORS } from '../constants/theme';
 import { SERVICES } from '../data/mockData';
 import ServiceCard from '../components/ServiceCard';
 
-export default function ServiceSelectionScreen({ navigation }) {
+export default function ServiceSelectionScreen({ route, navigation }) {
+  // Recebe os dados se vier da tela de Admin (Gestão de Clientes)
+  const { isAdminMode, clientData } = route.params || {};
+
   const [selectedServices, setSelectedServices] = useState([]);
 
   const toggleService = (service) => {
@@ -21,7 +24,7 @@ export default function ServiceSelectionScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
       
       {/* HEADER */}
       <View style={styles.header}>
@@ -32,7 +35,14 @@ export default function ServiceSelectionScreen({ navigation }) {
           <MaterialIcons name="arrow-back-ios" size={20} color={COLORS.textLight} />
         </TouchableOpacity>
         
-        <Text style={styles.headerTitle}>SELECIONAR SERVIÇOS</Text>
+        <View>
+            <Text style={styles.headerTitle}>SELECIONAR SERVIÇOS</Text>
+            {/* Feedback Visual se for Admin */}
+            {isAdminMode && (
+                <Text style={styles.adminLabel}>Cliente: {clientData.name}</Text>
+            )}
+        </View>
+        
         <View style={{ width: 40 }} />
       </View>
 
@@ -64,10 +74,13 @@ export default function ServiceSelectionScreen({ navigation }) {
           </View>
           
           <TouchableOpacity 
-            style={styles.btn}
+            style={[styles.btn, isAdminMode && {backgroundColor: '#4CAF50'}]} // Verde se for admin
             onPress={() => navigation.navigate('Booking', { 
               totalDuration: totalDuration, 
-              selectedServices: selectedServices // <--- CORREÇÃO AQUI: Enviando a lista!
+              selectedServices: selectedServices,
+              // REPASSANDO A BOLA PARA A PRÓXIMA TELA
+              isAdminMode: isAdminMode,
+              clientData: clientData
             })}
           >
             <Text style={styles.btnText}>ENCONTRAR HORÁRIOS</Text>
@@ -90,15 +103,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, 
     backgroundColor: COLORS.background 
   },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.surfaceHighlight,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
+  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.surfaceHighlight, justifyContent: 'center', alignItems: 'center' },
   headerTitle: { color: COLORS.textLight, fontSize: 16, fontWeight: 'bold', textAlign: 'center' },
+  adminLabel: { color: '#4CAF50', fontSize: 12, fontWeight: 'bold', textAlign: 'center' }, // Estilo novo
+
   footer: { position: 'absolute', bottom: 0, width: '100%', backgroundColor: '#181818', padding: 24, borderTopWidth: 1, borderColor: '#333' },
   footerInfo: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
   label: { color: COLORS.textSecondary, fontSize: 10, fontWeight: 'bold' },
