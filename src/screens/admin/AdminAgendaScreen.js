@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, StatusBar, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, StatusBar } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/theme';
 import { TODAY_APPOINTMENTS } from '../../data/mockData';
 
-export default function AdminAgendaScreen() {
+export default function AdminAgendaScreen({ navigation }) {
   const [appointments, setAppointments] = useState([]);
   const [filter, setFilter] = useState('today'); // 'today' or 'all'
 
   useEffect(() => {
-    // Simulando load
-    setAppointments([...TODAY_APPOINTMENTS]);
-  }, []);
+    // Simulando load dos dados
+    // Hack para forçar atualização quando voltar da tela de bloqueio (em um app real usamos useFocusEffect)
+    const unsubscribe = navigation.addListener('focus', () => {
+      setAppointments([...TODAY_APPOINTMENTS]);
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   const handleStatusChange = (id, newStatus) => {
     const updated = appointments.map(a => a.id === id ? { ...a, status: newStatus } : a);
@@ -29,10 +33,21 @@ export default function AdminAgendaScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.surface} />
       
-      {/* Header Simples */}
+      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Agenda Operacional</Text>
         <Text style={styles.dateDisplay}>Hoje, 14 de Outubro</Text>
+      </View>
+
+      {/* --- BOTÃO DE AÇÃO RÁPIDA (NOVO) --- */}
+      <View style={{ paddingHorizontal: 20, marginTop: 15 }}>
+        <TouchableOpacity 
+            style={styles.blockActionBtn}
+            onPress={() => navigation.navigate('AdminBlockTime')}
+        >
+            <MaterialIcons name="block" size={20} color="white" />
+            <Text style={styles.blockActionText}>BLOQUEAR HORÁRIOS</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 20 }}>
@@ -49,7 +64,8 @@ export default function AdminAgendaScreen() {
               <View key={item.id} style={styles.requestCard}>
                 <View style={styles.requestRow}>
                    <View style={styles.dateBox}>
-                      <Text style={styles.dateBoxDay}>{item.date.split('-')[2]}</Text>
+                      {/* Tratamento simples de data string YYYY-MM-DD */}
+                      <Text style={styles.dateBoxDay}>{item.date ? item.date.split('-')[2] : '14'}</Text>
                       <Text style={styles.dateBoxMonth}>OUT</Text>
                    </View>
                    <View style={{flex: 1, paddingHorizontal: 10}}>
@@ -92,7 +108,7 @@ export default function AdminAgendaScreen() {
                 <View>
                    <Text style={styles.apptClient}>{item.client}</Text>
                    <Text style={styles.apptService}>{item.service}</Text>
-                   {filter === 'all' && <Text style={styles.apptDate}>Dia {item.date.split('-')[2]}/10</Text>}
+                   {filter === 'all' && <Text style={styles.apptDate}>Dia {item.date ? item.date.split('-')[2] : '14'}/10</Text>}
                 </View>
              </View>
            ))
@@ -109,6 +125,26 @@ const styles = StyleSheet.create({
   headerTitle: { color: COLORS.textLight, fontSize: 20, fontWeight: 'bold' },
   dateDisplay: { color: COLORS.primary, fontSize: 14, fontWeight: 'bold', marginTop: 4 },
   
+  // Estilo do Botão de Bloqueio
+  blockActionBtn: {
+    backgroundColor: '#1E1E1E',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#333',
+    borderStyle: 'dashed'
+  },
+  blockActionText: {
+    color: COLORS.textSecondary,
+    fontWeight: 'bold',
+    fontSize: 12,
+    letterSpacing: 1
+  },
+
   alertSection: { marginBottom: 30 },
   alertHeader: { flexDirection: 'row', gap: 10, marginBottom: 10, alignItems: 'center' },
   alertTitle: { color: COLORS.primary, fontWeight: 'bold', fontSize: 16 },

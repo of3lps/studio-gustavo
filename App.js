@@ -1,4 +1,3 @@
-// App.js
 import React from 'react';
 import { StatusBar } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
@@ -13,8 +12,11 @@ import ServiceSelectionScreen from './src/screens/ServiceSelectionScreen';
 import BookingScreen from './src/screens/BookingScreen';
 import SuccessScreen from './src/screens/SuccessScreen';
 
-// Navegador do Admin (que contém as Abas: Agenda, Gestão e Loja)
+// Navegador do Admin (Abas)
 import AdminNavigator from './src/navigation/AdminNavigator';
+
+// Tela de Bloqueio (Admin) - Fica fora das abas para abrir por cima
+import AdminBlockTimeScreen from './src/screens/admin/AdminBlockTimeScreen';
 
 const Stack = createStackNavigator();
 
@@ -27,24 +29,23 @@ export default function App() {
       <Stack.Navigator 
         initialRouteName="Login" 
         screenOptions={{ 
-          headerShown: false, // Oculta o header padrão do React Navigation
-          cardStyle: { backgroundColor: '#121212' } // Fundo padrão escuro para transições
+          headerShown: false, 
+          cardStyle: { backgroundColor: '#121212' }
         }}
       >
         
-        {/* 1. TELA DE LOGIN (Decide se é Admin ou Cliente) */}
+        {/* 1. TELA DE LOGIN */}
         <Stack.Screen name="Login" component={LoginScreen} />
 
         {/* 2. FLUXO DO ADMINISTRADOR */}
-        {/* Ao navegar para cá, o app carrega o menu de abas inferior */}
         <Stack.Screen name="AdminDashboard" component={AdminNavigator} />
+        {/* Nova tela de Bloqueio */}
+        <Stack.Screen name="AdminBlockTime" component={AdminBlockTimeScreen} />
 
         {/* 3. FLUXO DO CLIENTE */}
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="ServiceSelection" component={ServiceSelectionScreen} />
         <Stack.Screen name="Booking" component={BookingScreen} />
-        
-        {/* Tela de Sucesso (sem header e sem animação de voltar para evitar confusão) */}
         <Stack.Screen 
           name="Success" 
           component={SuccessScreen} 
