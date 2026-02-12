@@ -8,7 +8,6 @@ export default function AdminClientsScreen({ navigation }) {
   const [searchText, setSearchText] = useState('');
   const [list, setList] = useState(CLIENTS);
 
-  // Função de Pesquisa Poderosa (Nome, Email ou Telefone)
   const handleSearch = (text) => {
     setSearchText(text);
     if (text === '') {
@@ -25,15 +24,14 @@ export default function AdminClientsScreen({ navigation }) {
   };
 
   const openWhatsApp = (phone) => {
-    // Remove caracteres não numéricos
     const number = phone.replace(/\D/g, '');
     const url = `https://wa.me/55${number}`;
     Linking.openURL(url).catch(() => Alert.alert("Erro", "Não foi possível abrir o WhatsApp"));
   };
 
-  // Renderiza cada cliente
   const renderItem = ({ item }) => (
     <View style={styles.card}>
+      {/* CABEÇALHO DO CARD */}
       <View style={styles.cardHeader}>
         <Image source={{ uri: item.avatar }} style={styles.avatar} />
         <View style={{ flex: 1, marginLeft: 12 }}>
@@ -46,36 +44,56 @@ export default function AdminClientsScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.divider} />
-
-      <View style={styles.footer}>
-        <View>
-             <Text style={styles.label}>Última Visita</Text>
-             <Text style={styles.value}>{item.lastVisit}</Text>
+      {/* --- NOVO: SE TIVER AGENDAMENTO FUTURO, MOSTRA ISSO --- */}
+      {item.upcomingAppt && (
+        <View style={styles.upcomingBadge}>
+            <MaterialIcons name="event" size={14} color="#155724" />
+            <Text style={styles.upcomingText}>
+                Agendado: <Text style={{fontWeight:'bold'}}>{item.upcomingAppt}</Text>
+            </Text>
         </View>
-        
-        {/* BOTÃO MÁGICO: AGENDAR PARA O CLIENTE */}
-        <TouchableOpacity 
-          style={styles.bookBtn}
-          onPress={() => {
-            // Navega para a seleção de serviço, mas avisa que é ADMIN agendando para ESTE cliente
-            navigation.navigate('ServiceSelection', { 
-              isAdminMode: true, 
-              clientData: item 
-            });
-          }}
-        >
-          <Text style={styles.bookBtnText}>Novo Agendamento</Text>
-          <MaterialIcons name="add-circle" size={16} color="white" />
-        </TouchableOpacity>
-      </View>
-      
+      )}
+
+      {/* --- NOVO: NOTAS (Movi para cá para ficar organizado) --- */}
       {item.notes ? (
         <View style={styles.notesContainer}>
             <MaterialIcons name="sticky-note-2" size={14} color={COLORS.primary} />
             <Text style={styles.noteText}>{item.notes}</Text>
         </View>
       ) : null}
+
+      <View style={styles.divider} />
+
+      {/* RODAPÉ COM ESTATÍSTICAS */}
+      <View style={styles.footer}>
+        
+        {/* Lado Esquerdo: Estatísticas */}
+        <View style={styles.statsRow}>
+            <View style={{marginRight: 15}}>
+                <Text style={styles.label}>Total Cortes</Text>
+                <Text style={styles.value}>{item.totalVisits || 0}</Text>
+            </View>
+            <View>
+                <Text style={styles.label}>Última Visita</Text>
+                <Text style={styles.value}>{item.lastVisit}</Text>
+            </View>
+        </View>
+        
+        {/* Lado Direito: Botão Agendar */}
+        <TouchableOpacity 
+          style={styles.bookBtn}
+          onPress={() => {
+            navigation.navigate('ServiceSelection', { 
+              isAdminMode: true, 
+              clientData: item 
+            });
+          }}
+        >
+          <Text style={styles.bookBtnText}>Agendar</Text>
+          <MaterialIcons name="add-circle" size={16} color="white" />
+        </TouchableOpacity>
+      </View>
+      
     </View>
   );
 
@@ -85,11 +103,10 @@ export default function AdminClientsScreen({ navigation }) {
         <Text style={styles.headerTitle}>Gestão de Clientes</Text>
       </View>
       
-      {/* Barra de Pesquisa */}
       <View style={styles.searchContainer}>
         <MaterialIcons name="search" size={24} color={COLORS.textSecondary} />
         <TextInput 
-          placeholder="Buscar por nome, telefone ou email..." 
+          placeholder="Buscar cliente..." 
           placeholderTextColor={COLORS.textSecondary}
           style={styles.input}
           value={searchText}
@@ -130,17 +147,33 @@ const styles = StyleSheet.create({
   
   zapBtn: { backgroundColor: '#25D366', width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
   
+  // Estilo novo para o badge de agendamento futuro
+  upcomingBadge: { 
+      marginTop: 12, 
+      backgroundColor: '#D4EDDA', // Fundo verde claro
+      paddingVertical: 6, 
+      paddingHorizontal: 10, 
+      borderRadius: 8, 
+      flexDirection: 'row', 
+      alignItems: 'center',
+      gap: 6,
+      alignSelf: 'flex-start' // Não estica a linha toda
+  },
+  upcomingText: { color: '#155724', fontSize: 12 },
+
+  notesContainer: { marginTop: 8, flexDirection: 'row', gap: 6, paddingLeft: 4 },
+  noteText: { color: COLORS.primary, fontSize: 12, fontStyle: 'italic', flex: 1 },
+
   divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginVertical: 12 },
   
   footer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  statsRow: { flexDirection: 'row' }, // Agrupa as estatísticas
+  
   label: { color: COLORS.textSecondary, fontSize: 10, textTransform: 'uppercase' },
   value: { color: COLORS.textLight, fontSize: 14, fontWeight: 'bold' },
   
-  bookBtn: { flexDirection: 'row', backgroundColor: COLORS.primary, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, alignItems: 'center', gap: 6 },
+  bookBtn: { flexDirection: 'row', backgroundColor: COLORS.primary, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 8, alignItems: 'center', gap: 6 },
   bookBtnText: { color: 'white', fontWeight: 'bold', fontSize: 12 },
-
-  notesContainer: { marginTop: 12, flexDirection: 'row', gap: 6, backgroundColor: 'rgba(212, 163, 115, 0.1)', padding: 8, borderRadius: 8 },
-  noteText: { color: COLORS.primary, fontSize: 12, fontStyle: 'italic', flex: 1 },
 
   empty: { color: COLORS.textSecondary, textAlign: 'center', marginTop: 40 }
 });
