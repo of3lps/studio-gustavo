@@ -97,6 +97,8 @@ export const CLIENTS = [
     email: 'joao@email.com', 
     avatar: 'https://ui-avatars.com/api/?name=Joao+Silva&background=D4A373&color=fff',
     lastVisit: '10/10/2026',
+    totalVisits: 12, // <--- NOVO: Quantidade total
+    upcomingAppt: '24/10 às 14:00', // <--- NOVO: Tem agendamento futuro
     notes: 'Gosta da lateral bem baixa (Zero).'
   },
   { 
@@ -106,6 +108,8 @@ export const CLIENTS = [
     email: 'pedro.s@email.com',
     avatar: 'https://ui-avatars.com/api/?name=Pedro+Santos&background=4CAF50&color=fff', 
     lastVisit: '05/10/2026',
+    totalVisits: 3, // <--- NOVO
+    upcomingAppt: null, // <--- NOVO: Não tem agendamento
     notes: 'Alergia a lâmina, usar shaver.'
   },
   { 
@@ -126,4 +130,17 @@ export const CLIENTS = [
     lastVisit: '12/10/2026',
     notes: ''
   },
+];
+// ... (Mantenha o resto igual)
+
+// DADOS PARA TESTE DE RELATÓRIO (Histórico de 30 dias atrás)
+export const HISTORY_APPOINTMENTS = [
+    { id: 'h1', date: '2026-09-10', price: 50, status: 'confirmed', service: 'Corte Clássico', client: 'João Silva' },
+    { id: 'h2', date: '2026-09-12', price: 90, status: 'confirmed', service: 'Corte + Barba', client: 'Pedro Santos' },
+    { id: 'h3', date: '2026-09-15', price: 50, status: 'cancelled', service: 'Corte Clássico', client: 'Lucas Mendes' },
+    { id: 'h4', date: '2026-10-01', price: 45, status: 'confirmed', service: 'Barba', client: 'João Silva' },
+    { id: 'h5', date: '2026-10-02', price: 120, status: 'confirmed', service: 'Platinado', client: 'Marcos Paulo' },
+    { id: 'h6', date: '2026-10-05', price: 50, status: 'confirmed', service: 'Corte Clássico', client: 'Pedro Santos' },
+    { id: 'h7', date: '2026-10-05', price: 50, status: 'confirmed', service: 'Corte Clássico', client: 'André Luiz' },
+  // ... adicione mais se quiser brincar
 ];
