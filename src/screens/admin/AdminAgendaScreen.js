@@ -1,45 +1,122 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, StatusBar } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { 
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, 
+  StatusBar, Alert, ActivityIndicator 
+} from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
 import { COLORS } from '../../constants/theme';
-import { TODAY_APPOINTMENTS } from '../../data/mockData';
+import { supabase } from '../../services/supabase';
+// IMPORTANTE: Trazendo o hook de autenticação para o Admin também
+import { useAuth } from '../../contexts/AuthContext'; 
 
 export default function AdminAgendaScreen({ navigation }) {
+  // Extraímos o signOut para poder deslogar
+  const { signOut } = useAuth();
+
   const [appointments, setAppointments] = useState([]);
-  const [filter, setFilter] = useState('today'); // 'today' or 'all'
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('today');
 
-  useEffect(() => {
-    // Simulando load dos dados
-    // Hack para forçar atualização quando voltar da tela de bloqueio (em um app real usamos useFocusEffect)
-    const unsubscribe = navigation.addListener('focus', () => {
-      setAppointments([...TODAY_APPOINTMENTS]);
-    });
-    return unsubscribe;
-  }, [navigation]);
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const headerDateText = format(new Date(), "'Hoje,' dd 'de' MMMM", { locale: ptBR });
 
-  const handleStatusChange = (id, newStatus) => {
-    const updated = appointments.map(a => a.id === id ? { ...a, status: newStatus } : a);
-    setAppointments(updated);
-    // Atualiza o global
-    const idx = TODAY_APPOINTMENTS.findIndex(a => a.id === id);
-    if(idx >= 0) TODAY_APPOINTMENTS[idx].status = newStatus;
+  const fetchAppointments = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('*')
+        .in('status', ['pending', 'confirmed']) 
+        .order('date', { ascending: true })
+        .order('time', { ascending: true });
+
+      if (error) throw error;
+
+      const formattedData = data.map(app => ({
+        id: app.id,
+        client: app.client_name || 'Cliente Sem Nome',
+        service: app.service_names,
+        date: app.date,
+        time: app.time.substring(0, 5),
+        price: app.price,
+        status: app.status
+      }));
+
+      setAppointments(formattedData);
+    } catch (error) {
+      console.log("Erro ao buscar agenda:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchAppointments();
+    }, [])
+  );
+
+  const handleStatusChange = async (id, newStatus) => {
+    try {
+      setAppointments(prev => prev.filter(a => {
+          if (a.id === id) {
+              if (newStatus === 'cancelled' || newStatus === 'completed') return false; 
+              a.status = newStatus;
+          }
+          return true;
+      }));
+
+      const { error } = await supabase
+        .from('appointments')
+        .update({ status: newStatus })
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      if (newStatus === 'completed') {
+          Alert.alert("Sucesso", "Corte finalizado e faturado!");
+      }
+
+    } catch (error) {
+      Alert.alert("Erro", "Falha ao atualizar o status.");
+      fetchAppointments(); 
+    }
+  };
+
+  // --- FUNÇÃO DE LOGOUT ---
+  const handleLogout = () => {
+    Alert.alert(
+        "Sair da Conta",
+        "Deseja realmente sair do painel do barbeiro?",
+        [
+            { text: "Cancelar", style: "cancel" },
+            { text: "Sair", onPress: signOut, style: 'destructive' }
+        ]
+    );
   };
 
   const pending = appointments.filter(a => a.status === 'pending');
-  // Filtra confirmados: Se o filtro for 'today', pega só dia 14 (mock), senão pega todos
-  const confirmed = appointments.filter(a => a.status === 'confirmed' && (filter === 'all' || a.date === '2026-10-14'));
+  const confirmed = appointments.filter(a => a.status === 'confirmed' && (filter === 'all' || a.date === todayStr));
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.surface} />
       
-      {/* Header */}
+      {/* HEADER ATUALIZADO (Agora com o botão de Logout) */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Agenda Operacional</Text>
-        <Text style={styles.dateDisplay}>Hoje, 14 de Outubro</Text>
+        <View>
+            <Text style={styles.headerTitle}>Agenda Operacional</Text>
+            <Text style={styles.dateDisplay}>{headerDateText}</Text>
+        </View>
+        <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
+            <MaterialIcons name="logout" size={24} color="#FF6B6B" />
+        </TouchableOpacity>
       </View>
 
-      {/* --- BOTÃO DE AÇÃO RÁPIDA (NOVO) --- */}
       <View style={{ paddingHorizontal: 20, marginTop: 15 }}>
         <TouchableOpacity 
             style={styles.blockActionBtn}
@@ -51,69 +128,87 @@ export default function AdminAgendaScreen({ navigation }) {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 20 }}>
-        
-        {/* SEÇÃO CRÍTICA: PENDENTES */}
-        {pending.length > 0 && (
-          <View style={styles.alertSection}>
-            <View style={styles.alertHeader}>
-               <MaterialIcons name="notifications-active" size={20} color={COLORS.primary} />
-               <Text style={styles.alertTitle}>Requer Atenção ({pending.length})</Text>
-            </View>
-            
-            {pending.map(item => (
-              <View key={item.id} style={styles.requestCard}>
-                <View style={styles.requestRow}>
-                   <View style={styles.dateBox}>
-                      {/* Tratamento simples de data string YYYY-MM-DD */}
-                      <Text style={styles.dateBoxDay}>{item.date ? item.date.split('-')[2] : '14'}</Text>
-                      <Text style={styles.dateBoxMonth}>OUT</Text>
-                   </View>
-                   <View style={{flex: 1, paddingHorizontal: 10}}>
-                      <Text style={styles.clientName}>{item.client}</Text>
-                      <Text style={styles.serviceDetail}>{item.service} • {item.time}</Text>
-                   </View>
-                   <Text style={styles.priceTag}>R$ {item.price}</Text>
-                </View>
-                
-                <View style={styles.actions}>
-                   <TouchableOpacity onPress={() => handleStatusChange(item.id, 'cancelled')} style={styles.btnDecline}>
-                      <Text style={styles.btnTextDec}>Recusar</Text>
-                   </TouchableOpacity>
-                   <TouchableOpacity onPress={() => handleStatusChange(item.id, 'confirmed')} style={styles.btnAccept}>
-                      <Text style={styles.btnTextAcc}>Aceitar</Text>
-                   </TouchableOpacity>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {/* SEÇÃO: AGENDA CONFIRMADA */}
-        <View style={styles.filterRow}>
-           <Text style={styles.sectionTitle}>Próximos Cortes</Text>
-           <View style={styles.tabs}>
-              <TouchableOpacity onPress={() => setFilter('today')}><Text style={[styles.tab, filter==='today' && styles.activeTab]}>Hoje</Text></TouchableOpacity>
-              <Text style={{color:'#333'}}>|</Text>
-              <TouchableOpacity onPress={() => setFilter('all')}><Text style={[styles.tab, filter==='all' && styles.activeTab]}>Todos</Text></TouchableOpacity>
-           </View>
-        </View>
-
-        {confirmed.length === 0 ? (
-           <Text style={styles.empty}>Nenhum corte confirmado para este período.</Text>
+        {loading ? (
+            <ActivityIndicator size="large" color={COLORS.primary} style={{marginTop: 50}} />
         ) : (
-           confirmed.map(item => (
-             <View key={item.id} style={styles.apptCard}>
-                <Text style={styles.timeBig}>{item.time}</Text>
-                <View style={styles.apptLine} />
-                <View>
-                   <Text style={styles.apptClient}>{item.client}</Text>
-                   <Text style={styles.apptService}>{item.service}</Text>
-                   {filter === 'all' && <Text style={styles.apptDate}>Dia {item.date ? item.date.split('-')[2] : '14'}/10</Text>}
+            <>
+                {pending.length > 0 && (
+                <View style={styles.alertSection}>
+                    <View style={styles.alertHeader}>
+                        <MaterialIcons name="notifications-active" size={20} color={COLORS.primary} />
+                        <Text style={styles.alertTitle}>Requer Atenção ({pending.length})</Text>
+                    </View>
+                    
+                    {pending.map(item => (
+                    <View key={item.id} style={styles.requestCard}>
+                        <View style={styles.requestRow}>
+                            <View style={styles.dateBox}>
+                                <Text style={styles.dateBoxDay}>{item.date.split('-')[2]}</Text>
+                                <Text style={styles.dateBoxMonth}>MÊS</Text>
+                            </View>
+                            <View style={{flex: 1, paddingHorizontal: 10}}>
+                                <Text style={styles.clientName}>{item.client}</Text>
+                                <Text style={styles.serviceDetail}>{item.service} • {item.time}</Text>
+                            </View>
+                            <Text style={styles.priceTag}>R$ {item.price}</Text>
+                        </View>
+                        
+                        <View style={styles.actions}>
+                            <TouchableOpacity onPress={() => handleStatusChange(item.id, 'cancelled')} style={styles.btnDecline}>
+                                <Text style={styles.btnTextDec}>Recusar</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => handleStatusChange(item.id, 'confirmed')} style={styles.btnAccept}>
+                                <Text style={styles.btnTextAcc}>Aceitar</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                    ))}
                 </View>
-             </View>
-           ))
-        )}
+                )}
 
+                <View style={styles.filterRow}>
+                    <Text style={styles.sectionTitle}>Próximos Cortes</Text>
+                    <View style={styles.tabs}>
+                        <TouchableOpacity onPress={() => setFilter('today')}>
+                            <Text style={[styles.tab, filter==='today' && styles.activeTab]}>Hoje</Text>
+                        </TouchableOpacity>
+                        <Text style={{color:'#333'}}>|</Text>
+                        <TouchableOpacity onPress={() => setFilter('all')}>
+                            <Text style={[styles.tab, filter==='all' && styles.activeTab]}>Todos</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {confirmed.length === 0 ? (
+                    <Text style={styles.empty}>Nenhum corte confirmado para este período.</Text>
+                ) : (
+                    confirmed.map(item => (
+                    <View key={item.id} style={styles.apptCard}>
+                        <Text style={styles.timeBig}>{item.time}</Text>
+                        <View style={styles.apptLine} />
+                        <View style={{flex: 1}}>
+                            <Text style={styles.apptClient}>{item.client}</Text>
+                            <Text style={styles.apptService}>{item.service}</Text>
+                            {filter === 'all' && (
+                                <Text style={styles.apptDate}>
+                                    {format(new Date(item.date + 'T00:00:00'), "dd 'de' MMM", { locale: ptBR })}
+                                </Text>
+                            )}
+                        </View>
+                        
+                        <View style={styles.apptActions}>
+                            <TouchableOpacity onPress={() => handleStatusChange(item.id, 'cancelled')} style={styles.iconBtn}>
+                                <MaterialIcons name="close" size={22} color="#F44336" />
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => handleStatusChange(item.id, 'completed')} style={[styles.iconBtn, {backgroundColor: 'rgba(76, 175, 80, 0.1)'}]}>
+                                <MaterialIcons name="check" size={22} color="#4CAF50" />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                    ))
+                )}
+            </>
+        )}
       </ScrollView>
     </View>
   );
@@ -121,29 +216,28 @@ export default function AdminAgendaScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  header: { paddingTop: 60, paddingBottom: 20, paddingHorizontal: 20, backgroundColor: COLORS.surface },
+  // Ajuste no Header para usar flexDirection: 'row' e alinhar o botão
+  header: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    paddingTop: 60, 
+    paddingBottom: 20, 
+    paddingHorizontal: 20, 
+    backgroundColor: COLORS.surface 
+  },
   headerTitle: { color: COLORS.textLight, fontSize: 20, fontWeight: 'bold' },
-  dateDisplay: { color: COLORS.primary, fontSize: 14, fontWeight: 'bold', marginTop: 4 },
+  dateDisplay: { color: COLORS.primary, fontSize: 14, fontWeight: 'bold', marginTop: 4, textTransform: 'capitalize' },
   
-  // Estilo do Botão de Bloqueio
-  blockActionBtn: {
-    backgroundColor: '#1E1E1E',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 8,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: '#333',
-    borderStyle: 'dashed'
+  // Estilo do botão de Logout
+  logoutBtn: { 
+    width: 40, height: 40, borderRadius: 20, 
+    backgroundColor: 'rgba(244, 67, 54, 0.1)', 
+    justifyContent: 'center', alignItems: 'center' 
   },
-  blockActionText: {
-    color: COLORS.textSecondary,
-    fontWeight: 'bold',
-    fontSize: 12,
-    letterSpacing: 1
-  },
+  
+  blockActionBtn: { backgroundColor: '#1E1E1E', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', padding: 12, borderRadius: 8, gap: 8, borderWidth: 1, borderColor: '#333', borderStyle: 'dashed' },
+  blockActionText: { color: COLORS.textSecondary, fontWeight: 'bold', fontSize: 12, letterSpacing: 1 },
 
   alertSection: { marginBottom: 30 },
   alertHeader: { flexDirection: 'row', gap: 10, marginBottom: 10, alignItems: 'center' },
@@ -175,6 +269,10 @@ const styles = StyleSheet.create({
   apptLine: { width: 2, height: '100%', backgroundColor: COLORS.surfaceHighlight, marginRight: 15 },
   apptClient: { color: COLORS.textLight, fontSize: 16, fontWeight: 'bold' },
   apptService: { color: COLORS.textSecondary, fontSize: 14 },
-  apptDate: { color: COLORS.primary, fontSize: 12, marginTop: 2 },
+  apptDate: { color: COLORS.primary, fontSize: 12, marginTop: 2, textTransform: 'capitalize' },
+  
+  apptActions: { flexDirection: 'row', gap: 10 },
+  iconBtn: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(244, 67, 54, 0.1)' },
+  
   empty: { color: COLORS.textSecondary, fontStyle: 'italic', marginTop: 20 }
 });
