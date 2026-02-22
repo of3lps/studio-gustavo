@@ -10,16 +10,16 @@ import { useFocusEffect } from '@react-navigation/native';
 import { COLORS } from '../constants/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../services/supabase';
-import { PRODUCTS } from '../data/mockData';
 
 export default function HomeScreen({ navigation }) {
-  // ADICIONADO: signOut para deslogar
   const { profile, refreshProfile, signOut } = useAuth();
   
   const [services, setServices] = useState([]);
+  const [products, setProducts] = useState([]); // NOVO: Estado para os produtos reais
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Busca os serviços
   const fetchServices = async () => {
     try {
       const { data, error } = await supabase
@@ -29,26 +29,43 @@ export default function HomeScreen({ navigation }) {
       if (!error) setServices(data || []);
     } catch (error) {
       console.log(error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
     }
+  };
+
+  // NOVO: Busca os produtos reais da loja
+  const fetchProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(5); // Mostra apenas os 5 mais recentes na Home
+      if (!error) setProducts(data || []);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const loadAllData = async () => {
+    setLoading(true);
+    await Promise.all([fetchServices(), fetchProducts()]);
+    setLoading(false);
+    setRefreshing(false);
   };
 
   useFocusEffect(
     useCallback(() => {
-      fetchServices();
+      loadAllData();
       refreshProfile(); 
     }, [])
   );
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchServices();
+    loadAllData();
     refreshProfile();
   };
 
-  // Função para confirmar saída
   const handleLogout = () => {
     Alert.alert(
         "Sair",
@@ -94,7 +111,6 @@ export default function HomeScreen({ navigation }) {
               </View>
               
               <View style={{flexDirection: 'row', alignItems: 'center', gap: 15}}>
-                  {/* Avatar (Vai pro Admin se tiver permissão) */}
                   <TouchableOpacity onPress={() => navigation.navigate('AdminDashboard')}>
                     <Image 
                         source={{ uri: profile?.avatar_url || 'https://via.placeholder.com/150' }} 
@@ -102,7 +118,6 @@ export default function HomeScreen({ navigation }) {
                     />
                   </TouchableOpacity>
 
-                  {/* NOVO: Botão de Logout */}
                   <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
                     <MaterialIcons name="logout" size={24} color="#FF6B6B" />
                   </TouchableOpacity>
@@ -141,7 +156,7 @@ export default function HomeScreen({ navigation }) {
                 <Text style={styles.loyaltyFooter}>
                     {currentPoints >= goalPoints 
                         ? "🎉 Parabéns! Você ganhou um corte grátis!" 
-                        : `Faltam ${goalPoints - currentPoints} pontos para o seu prêmio.`}
+                        : `Faltam ${goalPoints - currentPoints} pontos para o seu prémio.`}
                 </Text>
             </View>
         </View>
@@ -158,6 +173,8 @@ export default function HomeScreen({ navigation }) {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingLeft: 20, paddingRight: 20 }}>
             {loading ? (
                 <ActivityIndicator color={COLORS.primary} />
+            ) : services.length === 0 ? (
+                <Text style={{color: COLORS.textSecondary}}>Nenhum serviço disponível.</Text>
             ) : (
                 services.map((service) => (
                     <TouchableOpacity 
@@ -208,16 +225,22 @@ export default function HomeScreen({ navigation }) {
           </View>
           
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingLeft: 20, paddingRight: 20 }}>
-            {PRODUCTS.map((product) => (
-              <TouchableOpacity key={product.id} style={styles.productCard}>
-                <Image source={{ uri: product.img }} style={styles.productImg} />
-                <View style={styles.productContent}>
-                  <Text style={styles.productCategory}>{product.category}</Text>
-                  <Text numberOfLines={1} style={styles.productTitle}>{product.title}</Text>
-                  <Text style={styles.productPrice}>R$ {product.price}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+            {loading ? (
+                <ActivityIndicator color={COLORS.primary} />
+            ) : products.length === 0 ? (
+                <Text style={{color: COLORS.textSecondary, fontStyle: 'italic'}}>Novos produtos em breve!</Text>
+            ) : (
+                products.map((product) => (
+                  <TouchableOpacity key={product.id} style={styles.productCard}>
+                    <Image source={{ uri: product.img }} style={styles.productImg} />
+                    <View style={styles.productContent}>
+                      <Text style={styles.productCategory}>{product.category}</Text>
+                      <Text numberOfLines={1} style={styles.productTitle}>{product.title}</Text>
+                      <Text style={styles.productPrice}>R$ {product.price}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))
+            )}
           </ScrollView>
         </View>
 
@@ -225,14 +248,17 @@ export default function HomeScreen({ navigation }) {
 
       {/* === BOTTOM NAV === */}
       <View style={styles.bottomNav}>
-        <MaterialIcons name="home" size={28} color={COLORS.primary} />
+        <TouchableOpacity>
+            <MaterialIcons name="home" size={28} color={COLORS.primary} />
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.fabBtn} onPress={() => navigation.navigate('ServiceSelection')}>
           <MaterialIcons name="content-cut" size={28} color={COLORS.white} />
         </TouchableOpacity>
-        <View style={{position: 'relative'}}>
-            <MaterialIcons name="shopping-bag" size={24} color={COLORS.textSecondary} />
-            <View style={{position: 'absolute', top: -2, right: -2, width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.primary}} />
-        </View>
+
+        <TouchableOpacity onPress={() => navigation.navigate('Appointments')}>
+            <MaterialIcons name="event-note" size={28} color={COLORS.textSecondary} />
+        </TouchableOpacity>
       </View>
     </View>
   );
