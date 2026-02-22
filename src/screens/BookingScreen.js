@@ -18,7 +18,7 @@ import { useAuth } from '../contexts/AuthContext';
 const OPENING_HOUR = 9;  
 const CLOSING_HOUR = 19; 
 const INTERVAL = 30;     
-const WORK_ON_SUNDAY = false; // Fecha domingo
+const WORK_ON_SUNDAY = false; 
 const WORK_ON_MONDAY = true;  
 
 export default function BookingScreen({ route, navigation }) {
@@ -43,7 +43,7 @@ export default function BookingScreen({ route, navigation }) {
   // DatePicker Nativo
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  // --- 1. CARREGA DADOS DO MÊS INTEIRO ---
+  // --- 1. CARREGA DADOS DO MÊS INTEIRO (AGORA LENDO A DURAÇÃO) ---
   useEffect(() => {
     fetchMonthAvailability(baseDate);
   }, [baseDate]);
@@ -54,9 +54,10 @@ export default function BookingScreen({ route, navigation }) {
       const start = format(startOfMonth(dateRef), 'yyyy-MM-dd');
       const end = format(endOfMonth(addDays(dateRef, 60)), 'yyyy-MM-dd'); 
 
+      // Busca a data, hora e a DURAÇÃO do agendamento
       const { data, error } = await supabase
         .from('appointments')
-        .select('date, time')
+        .select('date, time, duration')
         .gte('date', start)
         .lte('date', end)
         .neq('status', 'cancelled');
@@ -64,9 +65,26 @@ export default function BookingScreen({ route, navigation }) {
       if (error) throw error;
 
       const appointmentsByDay = {};
+      
       data.forEach(app => {
-        if (!appointmentsByDay[app.date]) appointmentsByDay[app.date] = [];
-        appointmentsByDay[app.date].push(app.time);
+        const safeDate = app.date.split('T')[0]; 
+        const startTimeStr = app.time.substring(0, 5);
+        const duration = app.duration || 30; // Se não tiver duração gravada, assume 30 min
+
+        if (!appointmentsByDay[safeDate]) appointmentsByDay[safeDate] = [];
+
+        // LÓGICA DE EXPANSÃO DE HORÁRIOS:
+        // Transforma a hora inicial (ex: 09:00) em minutos totais (540)
+        const startMins = parseInt(startTimeStr.split(':')[0]) * 60 + parseInt(startTimeStr.split(':')[1]);
+        const slotsCount = Math.ceil(duration / INTERVAL); // Quantos blocos de 30 min ele ocupa?
+
+        // Pinta como ocupado TODOS os blocos de 30 min que o serviço usa
+        for (let i = 0; i < slotsCount; i++) {
+            const currentMins = startMins + (i * INTERVAL);
+            const h = Math.floor(currentMins / 60).toString().padStart(2, '0');
+            const m = (currentMins % 60).toString().padStart(2, '0');
+            appointmentsByDay[safeDate].push(`${h}:${m}`);
+        }
       });
 
       setMonthAppointments(appointmentsByDay);
@@ -87,7 +105,6 @@ export default function BookingScreen({ route, navigation }) {
     if (!WORK_ON_SUNDAY && isSunday(date)) return false;
     if (!WORK_ON_MONDAY && isMonday(date)) return false;
 
-    // Bloqueios de Banco (Agenda cheia)
     const dateString = format(date, 'yyyy-MM-dd');
     const busySlots = monthAppointments[dateString] || [];
 
@@ -181,7 +198,6 @@ export default function BookingScreen({ route, navigation }) {
 
   // --- AÇÕES ---
   const onDateChange = (event, date) => {
-      // No Android, a seleção de data fecha o modal automaticamente
       if (Platform.OS === 'android') {
           setShowDatePicker(false);
       }
@@ -201,12 +217,14 @@ export default function BookingScreen({ route, navigation }) {
         const userIdToSave = isAdminMode && clientData ? clientData.id : user.id;
         const clientNameToSave = isAdminMode && clientData ? clientData.name : profile?.full_name;
 
+        // GRAVA NO BANCO: duration incluída e regra de status corrigida
         const { error } = await supabase.from('appointments').insert({
             user_id: userIdToSave,
             client_name: clientNameToSave,
             service_names: serviceNames,
             date: dateString,
             time: selectedSlot,
+            duration: totalDuration, 
             price: totalAmount,
             status: isAdminMode ? 'confirmed' : 'pending', 
             payment_method: 'local'
@@ -357,7 +375,7 @@ export default function BookingScreen({ route, navigation }) {
         </View>
       )}
 
-      {/* MODAL DO CALENDÁRIO NATIVO (COM TEMA ESCURO E BOTÃO PARA iOS) */}
+      {/* MODAL DO CALENDÁRIO NATIVO */}
       {showDatePicker && (
         Platform.OS === 'ios' ? (
             <Modal transparent={true} animationType="fade" visible={showDatePicker}>

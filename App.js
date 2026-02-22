@@ -5,13 +5,14 @@ import { createStackNavigator } from '@react-navigation/stack';
 
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 
-// --- IMPORTAÇÃO DAS TELAS ---
 import LoginScreen from './src/screens/LoginScreen';
+import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen'; // NOVO: Importamos a tela
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import ServiceSelectionScreen from './src/screens/ServiceSelectionScreen';
 import BookingScreen from './src/screens/BookingScreen';
 import SuccessScreen from './src/screens/SuccessScreen';
+import AppointmentsScreen from './src/screens/AppointmentsScreen'; 
 
 import AdminNavigator from './src/navigation/AdminNavigator';
 import AdminBlockTimeScreen from './src/screens/admin/AdminBlockTimeScreen';
@@ -22,55 +23,37 @@ function RootNavigator() {
   const { user, profile, isAdmin, loading } = useAuth();
 
   if (loading) {
-     return (
-       <View style={{flex: 1, backgroundColor: '#121212', justifyContent: 'center', alignItems: 'center'}}>
-          <ActivityIndicator size="large" color="#D4A373" />
-       </View>
-     );
+      return (
+        <View style={{flex: 1, backgroundColor: '#121212', justifyContent: 'center', alignItems: 'center'}}>
+           <ActivityIndicator size="large" color="#D4A373" />
+        </View>
+      );
   }
 
   return (
-    <Stack.Navigator 
-      screenOptions={{ 
-        headerShown: false, 
-        cardStyle: { backgroundColor: '#121212' }
-      }}
-    >
-      
-      {/* 1. SE NÃO ESTIVER LOGADO */}
+    <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: '#121212' } }}>
       {!user ? (
-        <Stack.Screen name="Login" component={LoginScreen} />
-      ) : (
-        // 2. SE ESTIVER LOGADO...
+        // NOVO: Agrupamos Login e ForgotPassword na área de "usuários deslogados"
         <>
-          {/* TRAVA DE SEGURANÇA: Verifica se falta NOME ou TELEFONE */}
-          {!profile?.full_name || !profile?.phone ? (
-             <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+        </>
+      ) : !profile?.full_name || !profile?.phone ? (
+        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+      ) : (
+        <>
+          {isAdmin ? (
+             <Stack.Screen name="AdminDashboard" component={AdminNavigator} />
           ) : (
-             // 3. PERFIL COMPLETO -> APP REAL
-             <>
-                {isAdmin ? (
-                    <Stack.Screen name="AdminDashboard" component={AdminNavigator} />
-                ) : (
-                    <Stack.Screen name="Home" component={HomeScreen} />
-                )}
-                
-                <Stack.Screen name="ServiceSelection" component={ServiceSelectionScreen} />
-                <Stack.Screen name="Booking" component={BookingScreen} />
-                <Stack.Screen 
-                  name="Success" 
-                  component={SuccessScreen} 
-                  options={{ gestureEnabled: false }} 
-                />
-                
-                {isAdmin && (
-                   <Stack.Screen name="AdminBlockTime" component={AdminBlockTimeScreen} />
-                )}
-             </>
+             <Stack.Screen name="Home" component={HomeScreen} />
           )}
+          <Stack.Screen name="ServiceSelection" component={ServiceSelectionScreen} />
+          <Stack.Screen name="Booking" component={BookingScreen} />
+          <Stack.Screen name="Appointments" component={AppointmentsScreen} />
+          <Stack.Screen name="Success" component={SuccessScreen} options={{ gestureEnabled: false }} />
+          {isAdmin && <Stack.Screen name="AdminBlockTime" component={AdminBlockTimeScreen} />}
         </>
       )}
-
     </Stack.Navigator>
   );
 }

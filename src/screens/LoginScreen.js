@@ -8,13 +8,13 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { COLORS } from '../constants/theme';
 import { supabase } from '../services/supabase';
 
-export default function LoginScreen() {
+// NOVO: Adicionamos o { navigation } aqui para conseguir mudar de tela
+export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false); // Alternar entre Login e Cadastro
+  const [isSignUp, setIsSignUp] = useState(false); 
 
-  // --- LOGIN REAL ---
   const handleLogin = async () => {
     if (!email || !password) return Alert.alert("Ops", "Preencha email e senha");
     
@@ -28,17 +28,13 @@ export default function LoginScreen() {
       Alert.alert("Erro no Login", error.message);
       setLoading(false);
     }
-    // Sucesso: O AuthContext detecta e muda a tela automaticamente
   };
 
-  // --- CADASTRO REAL CORRIGIDO ---
   const handleSignUp = async () => {
     if (!email || !password) return Alert.alert("Ops", "Preencha email e senha");
     
     setLoading(true);
     
-    // CORREÇÃO AQUI: Removemos o envio de nome provisório.
-    // O usuário será criado no banco com full_name: null e phone: null.
     const { error } = await supabase.auth.signUp({
       email: email,
       password: password,
@@ -48,7 +44,7 @@ export default function LoginScreen() {
       Alert.alert("Erro no Cadastro", error.message);
     } else {
       Alert.alert("Conta Criada!", "Faça login para continuar e completar seu perfil.");
-      setIsSignUp(false); // Volta para a tela de login para ele entrar
+      setIsSignUp(false); 
     }
     setLoading(false);
   };
@@ -90,7 +86,7 @@ export default function LoginScreen() {
             />
           </View>
 
-          <View style={styles.inputContainer}>
+          <View style={[styles.inputContainer, { marginBottom: isSignUp ? 15 : 5 }]}>
             <MaterialIcons name="lock" size={20} color={COLORS.textSecondary} style={{marginRight: 10}} />
             <TextInput 
               placeholder="Senha" 
@@ -101,6 +97,13 @@ export default function LoginScreen() {
               onChangeText={setPassword}
             />
           </View>
+
+          {/* NOVO: BOTÃO ESQUECEU A SENHA (SÓ APARECE NO LOGIN) */}
+          {!isSignUp && (
+            <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')} style={styles.forgotBtn}>
+                <Text style={styles.forgotText}>Esqueceu a senha?</Text>
+            </TouchableOpacity>
+          )}
 
           {/* BOTÃO DE AÇÃO */}
           <TouchableOpacity 
@@ -151,9 +154,13 @@ const styles = StyleSheet.create({
   form: { width: '100%', backgroundColor: 'rgba(18, 18, 18, 0.85)', padding: 24, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
   headerForm: { color: COLORS.textLight, fontSize: 18, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
   
-  inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1E1E1E', height: 56, borderRadius: 12, paddingHorizontal: 16, marginBottom: 15, borderWidth: 1, borderColor: '#333' },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1E1E1E', height: 56, borderRadius: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#333' },
   input: { flex: 1, color: COLORS.textLight, fontSize: 16 },
   
+  // Estilo novo para o botão de esqueci a senha
+  forgotBtn: { alignSelf: 'flex-end', marginBottom: 15, paddingVertical: 5 },
+  forgotText: { color: COLORS.primary, fontSize: 13, fontWeight: 'bold' },
+
   btnPrimary: { backgroundColor: COLORS.primary, height: 56, borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 10 },
   btnText: { color: COLORS.white, fontWeight: 'bold', fontSize: 16, letterSpacing: 1 },
 });
