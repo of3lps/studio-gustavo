@@ -1,32 +1,32 @@
 {
   "expo": {
-    "name": "studio-gustavo",
-    "slug": "studio-gustavo",
+    "name": "Studio Gustavo Barber",
+    "slug": "studio-gustavo-barber-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "userInterfaceStyle": "dark",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#121212"
     },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.felps.studiogustavo"
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#121212"
       },
-      "edgeToEdgeEnabled": true
+      "package": "com.felps.studiogustavo"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    },
-    "plugins": [
-      "@react-native-community/datetimepicker"
-    ]
+      "favicon": "./assets/icon.png"
+    }
   }
 }
