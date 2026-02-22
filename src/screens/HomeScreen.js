@@ -15,11 +15,10 @@ export default function HomeScreen({ navigation }) {
   const { profile, refreshProfile, signOut } = useAuth();
   
   const [services, setServices] = useState([]);
-  const [products, setProducts] = useState([]); // NOVO: Estado para os produtos reais
+  const [products, setProducts] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Busca os serviços
   const fetchServices = async () => {
     try {
       const { data, error } = await supabase
@@ -32,14 +31,13 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
-  // NOVO: Busca os produtos reais da loja
   const fetchProducts = async () => {
     try {
       const { data, error } = await supabase
         .from('products')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(5); // Mostra apenas os 5 mais recentes na Home
+        .limit(5); 
       if (!error) setProducts(data || []);
     } catch (error) {
       console.log(error);
@@ -103,11 +101,14 @@ export default function HomeScreen({ navigation }) {
         >
           <LinearGradient colors={['rgba(18,18,18,0.3)', '#121212']} style={styles.heroGradient}>
             
-            {/* HEADER COM LOGOUT */}
+            {/* HEADER COM LOGOUT E LOGO OFICIAL */}
             <View style={styles.header}>
               <View style={styles.logoContainer}>
-                 <Text style={styles.logoText}>STUDIO</Text>
-                 <Text style={[styles.logoText, {color: COLORS.primary}]}>GUSTAVO</Text>
+                 <Image 
+                    source={require('../../assets/logo.png')} 
+                    style={styles.homeLogoImage} 
+                    resizeMode="contain"
+                 />
               </View>
               
               <View style={{flexDirection: 'row', alignItems: 'center', gap: 15}}>
@@ -275,7 +276,8 @@ const styles = StyleSheet.create({
   logoutBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,0,0,0.1)', justifyContent: 'center', alignItems: 'center' },
   
   logoContainer: { alignItems: 'flex-start' },
-  logoText: { color: COLORS.textLight, fontSize: 20, fontWeight: 'bold', letterSpacing: 1 },
+  homeLogoImage: { width: 140, height: 50 }, // Retangular para caber no cabeçalho
+  
   heroContent: { paddingHorizontal: 20 },
   estText: { color: COLORS.primary, fontSize: 12, fontWeight: 'bold', letterSpacing: 2, marginBottom: 8, textTransform: 'uppercase' },
   welcomeTitle: { color: COLORS.textLight, fontSize: 38, fontWeight: 'bold', lineHeight: 38, textTransform: 'uppercase' },

@@ -8,7 +8,6 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { COLORS } from '../constants/theme';
 import { supabase } from '../services/supabase';
 
-// NOVO: Adicionamos o { navigation } aqui para conseguir mudar de tela
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -60,13 +59,13 @@ export default function LoginScreen({ navigation }) {
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.content}>
         
-        {/* LOGO */}
+        {/* LOGO OFICIAL */}
         <View style={styles.logoContainer}>
-          <View style={styles.iconCircle}>
-            <MaterialIcons name="content-cut" size={40} color={COLORS.primary} />
-          </View>
-          <Text style={styles.logoTitle}>STUDIO <Text style={{color: COLORS.primary}}>GUSTAVO</Text></Text>
-          <Text style={styles.logoSubtitle}>Barber Shop</Text>
+          <Image 
+            source={require('../../assets/logo.png')} 
+            style={styles.logoImage} 
+            resizeMode="contain"
+          />
         </View>
 
         {/* FORMULÁRIO */}
@@ -98,7 +97,7 @@ export default function LoginScreen({ navigation }) {
             />
           </View>
 
-          {/* NOVO: BOTÃO ESQUECEU A SENHA (SÓ APARECE NO LOGIN) */}
+          {/* BOTÃO ESQUECEU A SENHA (SÓ APARECE NO LOGIN) */}
           {!isSignUp && (
             <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')} style={styles.forgotBtn}>
                 <Text style={styles.forgotText}>Esqueceu a senha?</Text>
@@ -147,17 +146,14 @@ const styles = StyleSheet.create({
   content: { flex: 1, zIndex: 2, justifyContent: 'center', padding: 24 },
   
   logoContainer: { alignItems: 'center', marginBottom: 40 },
-  iconCircle: { width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(212, 163, 115, 0.1)', justifyContent: 'center', alignItems: 'center', marginBottom: 16, borderWidth: 1, borderColor: COLORS.primary },
-  logoTitle: { fontSize: 28, fontWeight: 'bold', color: COLORS.textLight, letterSpacing: 2 },
-  logoSubtitle: { fontSize: 12, color: COLORS.textSecondary, letterSpacing: 4, textTransform: 'uppercase', marginTop: 5 },
-
+  logoImage: { width: 180, height: 180 }, // Ajuste o tamanho da logo aqui se precisar
+  
   form: { width: '100%', backgroundColor: 'rgba(18, 18, 18, 0.85)', padding: 24, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
   headerForm: { color: COLORS.textLight, fontSize: 18, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
   
   inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1E1E1E', height: 56, borderRadius: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#333' },
   input: { flex: 1, color: COLORS.textLight, fontSize: 16 },
   
-  // Estilo novo para o botão de esqueci a senha
   forgotBtn: { alignSelf: 'flex-end', marginBottom: 15, paddingVertical: 5 },
   forgotText: { color: COLORS.primary, fontSize: 13, fontWeight: 'bold' },
 
