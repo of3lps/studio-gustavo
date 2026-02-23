@@ -118,7 +118,7 @@ export const AuthProvider = ({ children }) => {
         const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
         
         token = (await Notifications.getExpoPushTokenAsync({
-          projectId: projectId || "ID_PENDENTE", 
+          projectId: projectId, 
         })).data;
         
         // Salva o token no banco de dados na linha deste usuário

@@ -23,10 +23,40 @@
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#121212"
       },
-      "package": "com.felps.studiogustavo"
+      "package": "com.felps.studiogustavo",
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "NOTIFICATIONS",
+        "VIBRATE",
+        "RECEIVE_BOOT_COMPLETED",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES"
+      ]
     },
     "web": {
       "favicon": "./assets/icon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#D4A373"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "O Studio Gustavo precisa de acesso à galeria para você adicionar fotos aos produtos e perfil."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "4539c310-febf-4bfa-9489-33f417dffd9c"
+      }
+    },
+    "owner": "ofelps"
   }
 }

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "156859240069",
+    "project_id": "studio-gustavo",
+    "storage_bucket": "studio-gustavo.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:156859240069:android:c59b62b9fb6ede6ff7a3ec",
+        "android_client_info": {
+          "package_name": "com.felps.studiogustavo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCBdwLWxavCoG0DiBNTS-iBtkC4VTU8mEg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
