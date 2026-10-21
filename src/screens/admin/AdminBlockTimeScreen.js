@@ -11,19 +11,18 @@ import { ptBR } from 'date-fns/locale';
 import { COLORS } from '../../constants/theme';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-
-const OPENING_HOUR = 9;
-const CLOSING_HOUR = 19;
-const INTERVAL = 30;
+import { useBusinessSettings } from '../../hooks/useBusinessSettings';
 
 export default function AdminBlockTimeScreen({ navigation }) {
   const { user } = useAuth();
-  
+  const { opening_hour: OPENING_HOUR, closing_hour: CLOSING_HOUR, slot_interval: INTERVAL } = useBusinessSettings();
+
   // Agora o baseDate pode ser atualizado pelo calendário
   const [baseDate, setBaseDate] = useState(new Date()); 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [slotsToBlock, setSlotsToBlock] = useState([]); 
-  const [busySlots, setBusySlots] = useState([]); 
+  const [busySlots, setBusySlots] = useState([]);
+  const [blockedEntries, setBlockedEntries] = useState([]); // Bloqueios já gravados ({ id, time })
   const [loading, setLoading] = useState(true);
 
   // DatePicker Nativo
@@ -37,7 +36,7 @@ export default function AdminBlockTimeScreen({ navigation }) {
   useEffect(() => {
     fetchDayAvailability(selectedDate);
     setSlotsToBlock([]); // Limpa a seleção ao mudar de dia
-  }, [selectedDate]);
+  }, [selectedDate, INTERVAL]);
 
   const fetchDayAvailability = async (date) => {
     setLoading(true);
@@ -46,14 +45,19 @@ export default function AdminBlockTimeScreen({ navigation }) {
 
       const { data, error } = await supabase
         .from('appointments')
-        .select('time, duration')
+        .select('id, time, duration, status')
         .eq('date', dateString)
-        .neq('status', 'cancelled');
+        .not('status', 'in', '(cancelled,declined)');
 
       if (error) throw error;
 
       const occupied = [];
+      const blocked = [];
       data.forEach(app => {
+        if (app.status === 'blocked') {
+            blocked.push({ id: app.id, time: app.time.substring(0, 5) });
+        }
+
         const startTimeStr = app.time.substring(0, 5);
         const duration = app.duration || 30;
         
@@ -69,6 +73,7 @@ export default function AdminBlockTimeScreen({ navigation }) {
       });
 
       setBusySlots(occupied);
+      setBlockedEntries(blocked.sort((a, b) => a.time.localeCompare(b.time)));
     } catch (error) {
       console.log("Erro ao buscar agenda para bloqueio:", error);
     } finally {
@@ -99,7 +104,7 @@ export default function AdminBlockTimeScreen({ navigation }) {
         }
     }
     return slots;
-  }, [selectedDate, busySlots, loading]);
+  }, [selectedDate, busySlots, loading, OPENING_HOUR, CLOSING_HOUR, INTERVAL]);
 
   const toggleSlot = (time) => {
     if (slotsToBlock.includes(time)) {
@@ -122,6 +127,34 @@ export default function AdminBlockTimeScreen({ navigation }) {
       }
   };
 
+  const handleUnblock = (entry) => {
+    Alert.alert(
+      "Desbloquear Horário",
+      `Liberar o horário das ${entry.time} para os clientes?`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Desbloquear",
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('appointments')
+                .delete()
+                .eq('id', entry.id)
+                .eq('status', 'blocked');
+
+              if (error) throw error;
+              fetchDayAvailability(selectedDate);
+            } catch (error) {
+              Alert.alert("Erro", "Falha ao desbloquear o horário.");
+              console.log(error);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const handleBlockConfirm = async () => {
     if (slotsToBlock.length === 0) return;
 
@@ -134,7 +167,7 @@ export default function AdminBlockTimeScreen({ navigation }) {
             service_names: 'Indisponível',
             date: dateString,
             time: time,
-            duration: 30, 
+            duration: INTERVAL,
             price: 0,
             status: 'blocked', 
             payment_method: 'none'
@@ -248,6 +281,28 @@ export default function AdminBlockTimeScreen({ navigation }) {
                     ) : (
                         <Text style={styles.emptyText}>Nenhum horário livre ou bloqueável neste dia.</Text>
                     )}
+                </View>
+            )}
+
+            {/* Bloqueios já existentes (toque para desbloquear) */}
+            {!loading && blockedEntries.length > 0 && (
+                <View style={{ marginTop: 30 }}>
+                    <Text style={[styles.sectionTitle, { marginLeft: 0, marginBottom: 15 }]}>Bloqueados neste dia</Text>
+                    <View style={styles.grid}>
+                        {blockedEntries.map((entry) => (
+                            <TouchableOpacity
+                                key={entry.id}
+                                onPress={() => handleUnblock(entry)}
+                                style={[styles.slot, styles.slotBlocked]}
+                            >
+                                <Text style={[styles.slotText, styles.slotTextBlocked]}>{entry.time}</Text>
+                                <View style={styles.blockedBadge}>
+                                    <MaterialIcons name="lock-open" size={12} color="white" />
+                                </View>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                    <Text style={[styles.infoText, { marginTop: 10 }]}>Toque em um horário bloqueado para liberá-lo.</Text>
                 </View>
             )}
         </View>

@@ -13,17 +13,21 @@ import { ptBR } from 'date-fns/locale';
 import { COLORS } from '../constants/theme';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../contexts/AuthContext';
-
-// --- CONFIGURAÇÕES DA BARBEARIA ---
-const OPENING_HOUR = 9;  
-const CLOSING_HOUR = 19; 
-const INTERVAL = 30;     
-const WORK_ON_SUNDAY = false; 
-const WORK_ON_MONDAY = true;  
+import { useBusinessSettings } from '../hooks/useBusinessSettings';
+import { DB_ERRORS } from '../constants/errors';
 
 export default function BookingScreen({ route, navigation }) {
   const { user, profile } = useAuth();
-  
+
+  // --- CONFIGURAÇÕES DA BARBEARIA (tabela business_settings) ---
+  const {
+    opening_hour: OPENING_HOUR,
+    closing_hour: CLOSING_HOUR,
+    slot_interval: INTERVAL,
+    work_on_sunday: WORK_ON_SUNDAY,
+    work_on_monday: WORK_ON_MONDAY,
+  } = useBusinessSettings();
+
   const { 
     totalDuration = 30, 
     selectedServices = [], 
@@ -46,7 +50,7 @@ export default function BookingScreen({ route, navigation }) {
   // --- 1. CARREGA DADOS DO MÊS INTEIRO (AGORA LENDO A DURAÇÃO) ---
   useEffect(() => {
     fetchMonthAvailability(baseDate);
-  }, [baseDate]);
+  }, [baseDate, INTERVAL]);
 
   const fetchMonthAvailability = async (dateRef) => {
     setLoading(true);
@@ -54,13 +58,8 @@ export default function BookingScreen({ route, navigation }) {
       const start = format(startOfMonth(dateRef), 'yyyy-MM-dd');
       const end = format(endOfMonth(addDays(dateRef, 60)), 'yyyy-MM-dd'); 
 
-      // Busca a data, hora e a DURAÇÃO do agendamento
-      const { data, error } = await supabase
-        .from('appointments')
-        .select('date, time, duration')
-        .gte('date', start)
-        .lte('date', end)
-        .neq('status', 'cancelled');
+      // Busca só data, hora e duração dos horários ocupados (sem dados dos outros clientes)
+      const { data, error } = await supabase.rpc('get_busy_slots', { p_start: start, p_end: end });
 
       if (error) throw error;
 
@@ -139,7 +138,7 @@ export default function BookingScreen({ route, navigation }) {
     }
 
     return false; 
-  }, [monthAppointments, totalDuration]);
+  }, [monthAppointments, totalDuration, OPENING_HOUR, CLOSING_HOUR, INTERVAL, WORK_ON_SUNDAY, WORK_ON_MONDAY]);
 
   // --- 3. GERA OS 7 DIAS DO CARROSSEL ---
   const nextDays = useMemo(() => {
@@ -194,7 +193,7 @@ export default function BookingScreen({ route, navigation }) {
     });
 
     return groups;
-  }, [selectedDate, monthAppointments, totalDuration, checkDayAvailability]);
+  }, [selectedDate, monthAppointments, totalDuration, checkDayAvailability, OPENING_HOUR, CLOSING_HOUR, INTERVAL]);
 
   // --- AÇÕES ---
   const onDateChange = (event, date) => {
@@ -238,7 +237,13 @@ export default function BookingScreen({ route, navigation }) {
             navigation.navigate('Success');
         }
     } catch (error) {
-        Alert.alert("Erro", "Falha ao agendar. Tente novamente.");
+        if (error?.code === DB_ERRORS.SLOT_TAKEN) {
+            Alert.alert("Horário indisponível", "Esse horário acabou de ser reservado. Escolha outro.");
+            setSelectedSlot(null);
+            fetchMonthAvailability(baseDate);
+        } else {
+            Alert.alert("Erro", "Falha ao agendar. Tente novamente.");
+        }
     }
   };
 
